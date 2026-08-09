@@ -1,5 +1,8 @@
 # Rebuilds whenever any source file changes.
 resource "null_resource" "build" {
+  triggers = {
+    always_run = timestamp()
+  }
 
   provisioner "local-exec" {
     working_dir = "${path.module}/../API/ContactForm.API"
@@ -20,7 +23,7 @@ resource "aws_lambda_function" "this" {
 
   # Amazon.Lambda.AspNetCoreServer.Hosting self-bootstraps — the handler is
   # just the published assembly name, no ::Class::Method suffix needed.
-  handler       = "ContactFormApi"
+  handler       = "ContactForm.API"
   runtime       = "dotnet8"
   architectures = ["arm64"]
 
@@ -46,7 +49,6 @@ resource "aws_lambda_function" "this" {
         "Email__Port"                       = tostring(var.email_port)
         "Email__Username"                   = var.email_username
         "Email__PasswordSecretArn"          = aws_secretsmanager_secret.email_password[0].arn
-        "Email__Password"                   = var.email_password
         "Email__AllowInvalidSslCertificate" = tostring(var.email_allow_invalid_ssl_certificate)
       } : {},
       var.captcha_enabled ? {

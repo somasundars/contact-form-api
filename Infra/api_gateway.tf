@@ -15,6 +15,7 @@ resource "aws_apigatewayv2_api" "this" {
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id                 = aws_apigatewayv2_api.this.id
   integration_type       = "AWS_PROXY"
+  integration_method     = "POST"
   integration_uri        = aws_lambda_function.this.invoke_arn
   payload_format_version = "2.0"
 }
@@ -24,6 +25,8 @@ resource "aws_apigatewayv2_route" "contact" {
   api_id    = aws_apigatewayv2_api.this.id
   route_key = "POST /api/portfolio/contact"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+
+  depends_on = [aws_apigatewayv2_integration.lambda, aws_lambda_permission.apigw]
 }
 
 resource "aws_apigatewayv2_stage" "default" {
