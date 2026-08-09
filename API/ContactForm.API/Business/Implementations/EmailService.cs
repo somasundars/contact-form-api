@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using ContactForm.API.Business.Interfaces;
 using ContactForm.API.Models;
@@ -28,6 +30,7 @@ public class EmailService : IEmailService
 
     public async Task SendContactMessageAsync(ContactRequest request, CancellationToken ct = default)
     {
+        _logger.LogInformation("Preparing to send contact form message from {Email}", request.Email);
         string Clean(string? s) => ControlChars.Replace(s ?? string.Empty, string.Empty).Trim();
 
         var safeName = Clean(request.Name);
@@ -35,6 +38,7 @@ public class EmailService : IEmailService
         var safeSubject = Clean(request.Subject);
         var safeMessage = Clean(request.Message);
 
+        _logger.LogInformation("Sending contact form message from {Email} with subject {Subject}", safeEmail, safeSubject);
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress("Website Contact Form", _settings.FromAddress));
         message.To.Add(MailboxAddress.Parse(_settings.ToAddress));
@@ -62,10 +66,33 @@ public class EmailService : IEmailService
                        $"<p>{WebUtility.HtmlEncode(safeMessage).Replace("\n", "<br/>")}</p>"
         };
         message.Body = builder.ToMessageBody();
-
         using var client = new SmtpClient();
+        var allowInvalidCertificates = _settings.AllowInvalidSslCertificate ||
+            string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
+
+        client.CheckCertificateRevocation = !allowInvalidCertificates;
+        client.ServerCertificateValidationCallback = (sender, certificate, chain, errors) =>
+        {
+            if (errors == SslPolicyErrors.None)
+            {
+                return true;
+            }
+
+            _logger.LogWarning(
+                "SMTP certificate validation failed for {Host} with errors {Errors}. AllowInvalidSslCertificate={AllowInvalid}",
+                _settings.Host,
+                errors,
+                allowInvalidCertificates);
+
+            return allowInvalidCertificates;
+        };
+
+        _logger.LogInformation("Connecting to SMTP server {Host}:{Port}", _settings.Host, _settings.Port);
         await client.ConnectAsync(_settings.Host, _settings.Port, SecureSocketOptions.StartTls, ct);
+        _logger.LogInformation("Connected to SMTP server {Host}:{Port}", _settings.Host, _settings.Port);
+        _logger.LogInformation("Authenticating to SMTP server {Host}:{Port} as {Username}", _settings.Host, _settings.Port, _settings.Username);
         await client.AuthenticateAsync(_settings.Username, _settings.Password, ct);
+        _logger.LogInformation("Authenticated to SMTP server {Host}:{Port} as {Username}", _settings.Host, _settings.Port, _settings.Username);
         await client.SendAsync(message, ct);
         await client.DisconnectAsync(true, ct);
 

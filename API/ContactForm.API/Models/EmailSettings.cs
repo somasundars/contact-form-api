@@ -9,6 +9,7 @@ namespace ContactForm.API.Models
         public int Port { get; set; } = 587;
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+        public bool AllowInvalidSslCertificate { get; set; } = false;
         /// <summary>ARN of a Secrets Manager secret holding the SMTP password (Lambda only). See SecretsResolver.</summary>
         public string? PasswordSecretArn { get; set; }
         public string FromAddress { get; set; } = string.Empty;
