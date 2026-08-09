@@ -3,6 +3,7 @@ using Amazon.Lambda.AspNetCoreServer.Hosting;
 using Amazon.SimpleEmailV2;
 using ContactForm.API.Business.Implementations;
 using ContactForm.API.Business.Interfaces;
+using System.Text.Json;
 using ContactForm.API.Business.Services;
 using ContactForm.API.Middleware;
 using ContactForm.API.Models;
@@ -89,7 +90,16 @@ else
 }
 
 builder.Services.AddControllers()
-    .ConfigureApiBehaviorOptions(o => o.SuppressMapClientErrors = false);
+    .ConfigureApiBehaviorOptions(o => o.SuppressMapClientErrors = false)
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+    });
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+});
 
 if (!isLambda)
 {
