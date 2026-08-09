@@ -3,7 +3,7 @@ using ContactForm.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-namespace ContactFormApi.Controllers;
+namespace ContactForm.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
