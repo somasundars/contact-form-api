@@ -12,6 +12,69 @@ resource "aws_apigatewayv2_api" "this" {
   }
 }
 
+data "aws_route53_zone" "this" {
+  name = var.route53_zone_name
+}
+
+resource "aws_acm_certificate" "api_gateway" {
+  domain_name       = var.custom_domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "api_gateway_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.api_gateway.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.this.zone_id
+}
+
+resource "aws_acm_certificate_validation" "api_gateway" {
+  certificate_arn         = aws_acm_certificate.api_gateway.arn
+  validation_record_fqdns = [for record in aws_route53_record.api_gateway_cert_validation : record.fqdn]
+}
+
+resource "aws_apigatewayv2_domain_name" "this" {
+  domain_name = var.custom_domain_name
+
+  domain_name_configuration {
+    certificate_arn = aws_acm_certificate_validation.api_gateway.certificate_arn
+    endpoint_type   = "REGIONAL"
+    security_policy = "TLS_1_2"
+  }
+}
+
+resource "aws_apigatewayv2_api_mapping" "this" {
+  api_id      = aws_apigatewayv2_api.this.id
+  domain_name = aws_apigatewayv2_domain_name.this.id
+  stage       = aws_apigatewayv2_stage.default.id
+}
+
+resource "aws_route53_record" "api_gateway_alias" {
+  zone_id = data.aws_route53_zone.this.zone_id
+  name    = var.custom_domain_name
+  type    = "A"
+
+  alias {
+    evaluate_target_health = false
+    name                   = aws_apigatewayv2_domain_name.this.domain_name_configuration[0].target_domain_name
+    zone_id                = aws_apigatewayv2_domain_name.this.domain_name_configuration[0].hosted_zone_id
+  }
+}
+
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id                 = aws_apigatewayv2_api.this.id
   integration_type       = "AWS_PROXY"

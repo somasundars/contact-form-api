@@ -14,6 +14,18 @@ variable "allowed_origins" {
   type        = list(string)
 }
 
+variable "custom_domain_name" {
+  description = "Custom domain name for the API Gateway"
+  type        = string
+  default     = ""
+}
+
+variable "route53_zone_name" {
+  description = "Route 53 hosted zone name that will contain the custom domain record"
+  type        = string
+  default     = ""
+}
+
 variable "lambda_memory_size" {
   type    = number
   default = 256
