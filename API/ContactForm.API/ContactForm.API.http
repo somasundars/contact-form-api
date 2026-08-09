@@ -1,0 +1,6 @@
+@ContactForm.API_HostAddress = http://localhost:5163
+
+POST {{ContactForm.API_HostAddress}}/api/portfolio/contactform
+Accept: application/json
+
+###
