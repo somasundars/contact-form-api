@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace ContactForm.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/portfolio/[controller]")]
 [EnableRateLimiting("ContactFormPolicy")]
 public class ContactController : ControllerBase
 {
